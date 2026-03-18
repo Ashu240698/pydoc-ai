@@ -129,9 +129,6 @@ class DocPreprocessor:
             # Split the text into chunks
             chunks = self.text_splitter.split_text(text)
 
-            # Note: Extending with chunks (strings) - this might be for debugging or intermediate step
-            all_chunks.extend(chunks)
-
             # For each chunk, create metadata dictionary
             for i, chunk_text in enumerate(chunks):
 
@@ -139,10 +136,10 @@ class DocPreprocessor:
                 chunk_data = {
                     "chunk_id":global_chunk_id,
                     "local_chunk_id":i,
-                    "title":doc['source'],
+                    "source":doc['source'],
                     "module":doc.get("module") or doc.get("page"),
                     "url":doc['url'],
-                    "chunk_text":chunk_text
+                    "text":chunk_text
                 }
 
                 # Increment global chunk ID

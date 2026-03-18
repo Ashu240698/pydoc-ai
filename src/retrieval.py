@@ -139,8 +139,8 @@ class RAGRetriever:
         query_embeddings = self.embedding_model.encode([query])
         faiss_dist, faiss_indices = self.faiss_index.search(query_embeddings, k=k)
         faiss_similarities = 1 + (1 / faiss_dist[0])
-        faiss_min = faiss_dist.min()
-        faiss_max = faiss_dist.max()
+        faiss_min = faiss_similarities.min()
+        faiss_max = faiss_similarities.max()
         faiss_normalized = (faiss_similarities - faiss_min) / (faiss_max - faiss_min) if faiss_max > faiss_min else faiss_similarities
 
         tokenized_query = query.lower().split()
@@ -199,7 +199,7 @@ class RAGRetriever:
                 'chunk_id':idx,
                 'text':self.chunks[idx],
                 'metadata':self.metadata[idx],
-                'scores':top_scores[i]
+                'score':top_scores[i]
             })
 
         print(f"   ✅ Retrieved {len(results)} results")
@@ -233,7 +233,7 @@ class RAGRetriever:
 
         for i, result in enumerate(results, 1):
             if isinstance(result, dict):
-                print(f"\n[{i}] Score: {result['scores']:.3f}")
+                print(f"\n[{i}] Score: {result['score']:.3f}")
                 print(f"    Source: {result['metadata']['source']}")
                 print(f"    Module: {result['metadata'].get('module', 'N/A')}")
                 print(f"    Text: {result['text'][:150]}...")
