@@ -41,3 +41,6 @@ logs/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs (exclude actual log files, keep folder)
+logs/*.log
