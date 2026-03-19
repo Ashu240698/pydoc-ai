@@ -168,6 +168,38 @@ class RAGRetriever:
     
 
 
+    def rerank(self, query, candidate_indices, k=4):
+        """
+        Re-rank candidates using cross-encoder.
+        
+        Args:
+            query: Search query
+            candidate_indices: List of chunk indices from hybrid search
+            k: Number of top results to return
+        
+        Returns:
+            top_indices: Re-ranked top-k indices
+            top_scores: Cross-encoder scores
+        """
+        
+        print(f"   Stage 2: Re-ranking {len(candidate_indices)} candidates...")
+        candidate_chunks = [self.chunks[idx] for idx in candidate_indices]
+        pairs = [[query, chunk] for chunk in candidate_chunks]
+        re_ranked_scores = self.reranker.predict(pairs)
+        print(f"re-ranked scores: {re_ranked_scores}")
+        sorted_positions = np.argsort(re_ranked_scores)[::-1]
+        print(f"re-ranked indices: {sorted_positions}")
+        final_top_4_positions = sorted_positions[:k]
+        print(f"Final top 4 positions: {final_top_4_positions}")
+        final_top_4_indices = [candidate_indices[idx] for idx in final_top_4_positions]
+        final_top_4_scores = [re_ranked_scores[idx] for idx in final_top_4_positions]
+
+        print(f"Re-ranked to top 4 best chunks")
+        print(f"Final top 4 indices: {final_top_4_indices}")
+        print(f"Final reranker scores: {[f'{s:.2f}' for s in final_top_4_scores]}")
+
+        return final_top_4_indices, final_top_4_scores
+    
 
     def retrieve(self, query, k_hybrid=20, k_final=4, alpha=0.5):
         """
@@ -190,7 +222,10 @@ class RAGRetriever:
         
         # Stage 1: Hybrid search
         print(f"   Stage 1: Hybrid search (top {k_hybrid})...")
-        top_indices, top_scores = self.hybrid_search(query, k_hybrid, alpha)
+        hybrid_indices, hybrid_scores = self.hybrid_search(query, k=k_hybrid, alpha=alpha)
+
+        # Stage 2: Re-ranking 
+        top_indices, top_scores = self.rerank(query, hybrid_indices, k=k_final)
 
         results = []
         for i in range(min(k_final, len(top_indices))):
@@ -199,7 +234,8 @@ class RAGRetriever:
                 'chunk_id':idx,
                 'text':self.chunks[idx],
                 'metadata':self.metadata[idx],
-                'score':top_scores[i]
+                'hybrid_score':hybrid_scores[hybrid_indices.index(idx)],
+                'rerank_score':top_scores[i]
             })
 
         print(f"   ✅ Retrieved {len(results)} results")
@@ -233,10 +269,11 @@ class RAGRetriever:
 
         for i, result in enumerate(results, 1):
             if isinstance(result, dict):
-                print(f"\n[{i}] Score: {result['score']:.3f}")
-                print(f"    Source: {result['metadata']['source']}")
-                print(f"    Module: {result['metadata'].get('module', 'N/A')}")
-                print(f"    Text: {result['text'][:150]}...")
+                for i, result in enumerate(results, 1):
+                    print(f"\n[{i}] Hybrid: {result.get('hybrid_score', 0):.3f} | Rerank: {result['rerank_score']:.2f}")
+                    print(f"    Source: {result['metadata']['source']}")
+                    print(f"    Module: {result['metadata'].get('module', 'N/A')}")
+                    print(f"    Text: {result['text'][:150]}...")
             else:
                 print(f"Warning: result is a {type(result)}, not a dict.")
     
