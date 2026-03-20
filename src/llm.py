@@ -12,15 +12,25 @@ from src.retrieval import RAGRetriever
 class LLMHandler:
     """Handles LLM interactions with context from RAG."""
 
-    def __init__(self):
+    def __init__(self, api_key):
         """
         Initialize the LLM handler with Groq client and RAG retriever.
 
         Sets up the necessary components for processing queries, including
         loading pre-built indexes for efficient retrieval.
+
+        Args:
+            api_key: Groq API key (if None, uses env variable)
         """
+
+        # Use provided key or fall back to environment
+        groq_key = api_key or config.GROQ_API_KEY
+
+        if not groq_key:
+            raise ValueError("GROQ_API_KEY must be provided or set in environment")
+
         # Initialize Groq API client with API key from configuration
-        self.client = Groq(api_key=config.GROQ_API_KEY)
+        self.client = Groq(api_key=groq_key)
 
         # Initialize RAG retriever for document retrieval
         self.retriever = RAGRetriever()
